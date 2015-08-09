@@ -33,6 +33,7 @@ class StaleRedisCache(object):
         logging.info("get redis cache for %s, and ttl is: %d" % (key, res[0] or -1))
 
         if not res[0] or res[0] < self.stale and callback:
+            r = self._get_redis()
             logging.info("auto create new cache for %s" % (key))
             # define inline callback to create new cache.
             def func():
