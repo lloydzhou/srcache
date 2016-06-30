@@ -4,4 +4,4 @@
 __version__ = '1.0'
 VERSION = tuple(map(int, __version__.split('.')))
 
-from .rediscache import StaleRedisCache
+from .rediscache import RedisDB, StaleRedisCache, stale_redis_cache
