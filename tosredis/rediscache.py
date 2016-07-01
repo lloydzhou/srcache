@@ -38,7 +38,7 @@ def stale_redis_cache(redisdb=None, key=None, prifix=None, attr_key=None, attr_p
             name = key or (attr_key and getattr(self, attr_key))
             if not name:
                 _prifix = prifix or (attr_prifix and getattr(self, attr_prifix)) or method.__name__
-                name = "%s:%u" % (_prifix, crc32(pickle.dumps(args) + pickle.dumps(kwargs)))
+                name = "%s:%08x" % (_prifix, crc32(pickle.dumps(args) + pickle.dumps(kwargs)) & 0xffffffff)
             res = redisdb.client(name).pipeline().ttl(name).get(name).execute()
             v = pickle.loads(res[1]) if res[0] > 0 and res[1] else None
             if res[0] <= 0 or res[0] < stale:
