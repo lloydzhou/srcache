@@ -9,7 +9,7 @@ define('REDIS_HOST', default="localhost")
 define('REDIS_PORT', default=6379)
 define('REDIS_DB', default=1)
 
-from srcache import stalecache
+from srcache import stalecache, delete
 
 
 class Test:
@@ -17,10 +17,15 @@ class Test:
     def get_data(self, name):
         return "hello %s" % name
 
+    @delete(target="get_data")
+    def delete_data(self, name):
+        return "delete %s" % name
+
 
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
     t = Test()
+    # print(t.delete_data('world'))
     print(t.get_data('world'))
     IOLoop.current().add_timeout(IOLoop.current().time() + 2, lambda: IOLoop.current().stop())
     IOLoop.instance().start()
