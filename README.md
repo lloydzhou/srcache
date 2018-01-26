@@ -4,29 +4,20 @@ using tornado.ioloop to make async task.
 
 ## Synopsis
 
-### using class
-
-    cache = StaleRedisCache(duration=10, stale=10)
-    # using callback to auto create cache.
-    print cache.get('foo', lambda x: "hello %s" % x, 'world')
-    IOLoop.current().add_timeout(IOLoop.current().time() + 3, lambda: IOLoop.current().stop())
-    IOLoop.instance().start()
-
 ### using decorator
 
-    @stale_redis_cache()
+    @stalecache()
     def get_data(name):
         return "hello %s" % name
 
-    print cache.get('foo', lambda x: "hello %s" % x, 'world')
-    print get_data('world')
+    print(get_data('world'))
     IOLoop.current().add_timeout(IOLoop.current().time() + 2, lambda: IOLoop.current().stop())
     IOLoop.instance().start()
 
 
 ## Test
 
-run command "python rediscache.py" to test this library.
+run command "python3 test.py" to test this library.
 
 #### first time create new cache in blocking modal
 

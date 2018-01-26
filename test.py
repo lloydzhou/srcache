@@ -3,20 +3,29 @@
 import sys
 import logging
 from tornado.ioloop import IOLoop
-from tosredis import StaleRedisCache, stale_redis_cache
+from tornado.options import define
+
+define('REDIS_HOST', default="localhost")
+define('REDIS_PORT', default=6379)
+define('REDIS_DB', default=1)
+
+from srcache import stalecache
 
 
-@stale_redis_cache()
+class A:
+    @stalecache()
+    def get_data(self, name):
+        return "hello %s" % name
+
+@stalecache()
 def get_data(name):
     return "hello %s" % name
 
 
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-    cache = StaleRedisCache(expire=10, stale=10, max_time_delay=0, time_delay=0)
-    # using callback to auto create cache.
-    print cache.get('foo', lambda x: "hello %s" % x, 'world')
-    print get_data('world')
+    a = A()
+    print(a.get_data('world'))
     IOLoop.current().add_timeout(IOLoop.current().time() + 2, lambda: IOLoop.current().stop())
     IOLoop.instance().start()
 
