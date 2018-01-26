@@ -49,6 +49,7 @@ def stalecache(key=None, prifix=None, attr_key=None, attr_prifix=None,
 
                 # create new cache in blocking modal, if cache not exists.
                 if res[0] <= 0:
+                    logging.debug("get cache in blocking modal: %s", name)
                     return func()
 
                 # create new cache in non blocking modal, and return stale data.
@@ -56,6 +57,8 @@ def stalecache(key=None, prifix=None, attr_key=None, attr_prifix=None,
                 real_time_delay = random.randrange(time_delay, max_time_delay)
                 client().expire(name, expire + real_time_delay + time_lock)
                 IOLoop.current().add_timeout(IOLoop.current().time() + real_time_delay, func)
+
+            logging.debug("get cache: %s", name)
 
             return v
         return wrapper

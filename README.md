@@ -6,13 +6,17 @@ using tornado.ioloop to make async task.
 
 ### using decorator
 
-    @stalecache()
-    def get_data(name):
-        return "hello %s" % name
-
-    print(get_data('world'))
-    IOLoop.current().add_timeout(IOLoop.current().time() + 2, lambda: IOLoop.current().stop())
-    IOLoop.instance().start()
+    class A:
+        @stalecache(expire=10, stale=10)
+        def get_data(self, name):
+            return "hello %s" % name
+    
+    if __name__ == '__main__':
+        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+        a = A()
+        print(a.get_data('world'))
+        IOLoop.current().add_timeout(IOLoop.current().time() + 2, lambda: IOLoop.current().stop())
+        IOLoop.instance().start()
 
 
 ## Test
@@ -22,21 +26,20 @@ run command "python3 test.py" to test this library.
 #### first time create new cache in blocking modal
 
 
-    INFO:root:get redis cache for foo, and ttl is: -1
-    INFO:root:auto  create new cache for foo
-    INFO:root:auto set value for key foo
+    DEBUG:root:get cache in blocking modal: __main__.Test.get_data:3101872214
+    DEBUG:root:update cache: __main__.Test.get_data:3101872214
     hello world
 
 #### Hit cache, just return cached data
 
 
-    INFO:root:get redis cache for foo, and ttl is: 16
+    DEBUG:root:get cache: __main__.Test.get_data:3101872214
     hello world
 
 #### Cache in stale modal, auto create new cache in non blocking modal
 
 
-    INFO:root:get redis cache for foo, and ttl is: 6
-    INFO:root:auto  create new cache for foo
+    DEBUG:root:get cache: __main__.Test.get_data:3101872214
     hello world
-    INFO:root:auto set value for key foo
+    DEBUG:root:update cache: __main__.Test.get_data:3101872214
+

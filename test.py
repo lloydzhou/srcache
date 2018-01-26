@@ -12,20 +12,16 @@ define('REDIS_DB', default=1)
 from srcache import stalecache
 
 
-class A:
-    @stalecache()
+class Test:
+    @stalecache(expire=10, stale=10)
     def get_data(self, name):
         return "hello %s" % name
-
-@stalecache()
-def get_data(name):
-    return "hello %s" % name
 
 
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-    a = A()
-    print(a.get_data('world'))
+    t = Test()
+    print(t.get_data('world'))
     IOLoop.current().add_timeout(IOLoop.current().time() + 2, lambda: IOLoop.current().stop())
     IOLoop.instance().start()
 
