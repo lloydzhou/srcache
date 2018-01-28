@@ -23,6 +23,10 @@ def client():
     return redis.StrictRedis(connection_pool=redispool)
 
 
+def gen_prefix(obj, method):
+    return '.'.join([obj.__module__, obj.__class__.__name__, method.__name__])
+
+
 def stalecache(key=None, prefix=None, attr_key=None, attr_prefix=None,
                expire=600, stale=3600, time_lock=1, time_delay=1, max_time_delay=10):
     def _(method):
@@ -33,8 +37,7 @@ def stalecache(key=None, prefix=None, attr_key=None, attr_prefix=None,
 
             name = key or kwargs.get('key', None) or (attr_key and getattr(self, attr_key))
             if not name:
-                _prefix = prefix or (attr_prefix and getattr(self, attr_prefix))\
-                    or '.'.join([self.__module__, self.__class__.__name__, method.__name__])
+                _prefix = prefix or (attr_prefix and getattr(self, attr_prefix)) or gen_prefix(self, method)
                 name = "%s:%u" % (_prefix, crc32(pickle.dumps(args) + pickle.dumps(kwargs)))
             res = client().pipeline().ttl(name).get(name).execute()
             v = pickle.loads(res[1]) if res[0] > 0 and res[1] else None
@@ -55,7 +58,7 @@ def stalecache(key=None, prefix=None, attr_key=None, attr_prefix=None,
                 # create new cache in non blocking modal, and return stale data.
                 # set expire to get a "lock", and delay to run the task
                 real_time_delay = random.randrange(time_delay, max_time_delay)
-                client().expire(name, expire + real_time_delay + time_lock)
+                client().expire(name, stale + real_time_delay + time_lock)
                 IOLoop.current().add_timeout(IOLoop.current().time() + real_time_delay, func)
 
             return v
@@ -63,27 +66,24 @@ def stalecache(key=None, prefix=None, attr_key=None, attr_prefix=None,
     return _
 
 
-def delete(key=None, prefix=None, attr_key=None, target=None):
+def delete(key=None, prefix=None, attr_key=None, attr_prefix=None, target=None, stale=3600):
     def _(method):
         @functools.wraps(method)
         def wrapper(self, *args, **kwargs):
             value = method(self, *args, **kwargs)
+            c = client()
 
             # delete by key
             name = key or kwargs.get('key', None) or (attr_key and getattr(self, attr_key))
             if name:
-                client().delete(name)
+                c.expire(name, stale)
 
             # delete by prefix
-            _prefix = prefix or (target and hasattr(self, target) and '.'.join(
-                [self.__module__, self.__class__.__name__, getattr(self, target).__name__]
-            ))
-            print(_prefix)
+            _prefix = prefix or (attr_prefix and getattr(self, attr_prefix))\
+                or (target and hasattr(self, target) and gen_prefix(self, getattr(self, target)))
             if _prefix:
-                names = client().keys(pattern="{}*".format(_prefix))
-                print(names, _prefix)
-                if len(names) > 0:
-                    client().delete(*names)
+                for name in c.keys(pattern="{}*".format(_prefix)):
+                    c.expire(name, stale)
 
             return value
         return wrapper
