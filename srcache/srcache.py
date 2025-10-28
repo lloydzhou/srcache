@@ -64,7 +64,7 @@ def deserialize(data, use_json=False):
 
 def stalecache(key=None, prefix=None, attr_key=None, attr_prefix=None,
                expire=600, stale=3600, time_lock=1, time_delay=1, max_time_delay=10,
-               use_json=False, enable_fallback=True):
+               use_json=False, enable_fallback=False):
     """
     Stale cache decorator with error handling.
     
@@ -79,7 +79,7 @@ def stalecache(key=None, prefix=None, attr_key=None, attr_prefix=None,
         time_delay: Minimum delay before async update
         max_time_delay: Maximum delay before async update
         use_json: Use JSON serialization instead of pickle (safer but limited types)
-        enable_fallback: Fall back to calling original method if cache fails
+        enable_fallback: Fall back to calling original method if cache fails (default: False)
     """
     def _(method):
         @functools.wraps(method)
@@ -117,8 +117,11 @@ def stalecache(key=None, prefix=None, attr_key=None, attr_prefix=None,
             if res[0] <= 0 or res[0] < stale:
 
                 def func():
+                    value = None
+                    method_called = False
                     try:
                         value = method(self, *args, **kwargs)
+                        method_called = True
                         logging.debug("update cache: %s", name)
                         client().pipeline().set(
                             name, serialize(value, use_json)
@@ -127,7 +130,11 @@ def stalecache(key=None, prefix=None, attr_key=None, attr_prefix=None,
                     except redis.RedisError as e:
                         logging.error("Redis error when updating cache: %s", e)
                         # Return the computed value even if cache update fails
-                        return value if 'value' in locals() else method(self, *args, **kwargs)
+                        if method_called:
+                            return value
+                        else:
+                            # Re-call method if it wasn't called yet
+                            return method(self, *args, **kwargs)
                     except Exception as e:
                         logging.error("Error updating cache: %s", e)
                         raise
@@ -182,8 +189,11 @@ def stalecache(key=None, prefix=None, attr_key=None, attr_prefix=None,
             if res[0] <= 0 or res[0] < stale:
 
                 async def func():
+                    value = None
+                    method_called = False
                     try:
                         value = await method(self, *args, **kwargs)
+                        method_called = True
                         logging.debug("update cache: %s", name)
                         client().pipeline().set(
                             name, serialize(value, use_json)
@@ -192,7 +202,11 @@ def stalecache(key=None, prefix=None, attr_key=None, attr_prefix=None,
                     except redis.RedisError as e:
                         logging.error("Redis error when updating cache: %s", e)
                         # Return the computed value even if cache update fails
-                        return value if 'value' in locals() else await method(self, *args, **kwargs)
+                        if method_called:
+                            return value
+                        else:
+                            # Re-call method if it wasn't called yet
+                            return await method(self, *args, **kwargs)
                     except Exception as e:
                         logging.error("Error updating cache: %s", e)
                         raise
